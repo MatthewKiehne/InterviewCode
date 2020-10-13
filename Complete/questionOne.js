@@ -15,7 +15,7 @@ console.log("Invalid Email Addresses")
 InvalidEntry("I", "@.+(\.com|\.edu|\.net|\.org)$", 2);
 console.log("")
 console.log("Invalid Phone Numbers")
-InvalidEntry("H", "\\d{3}-\\d{3}-\\d{4}", 2);
+InvalidEntry("H", "^\\d{3}-\\d{3}-\\d{4}$", 2);
 
 
 //1
@@ -47,7 +47,6 @@ let fileName = mm + "" + dd + "" + yyyy + "-ordertotal.txt";
 
 // Write data in 'Output.txt' . 
 fs.writeFile('reports/' + fileName, getTotalValue(tempSheet), (err) => {
-
     // In case of a error throw err. 
     if (err) throw err;
 });
@@ -136,7 +135,6 @@ function getTotalValue(worksheet) {
     //goes through the data on the page
     while (cellValue !== undefined) {
 
-
         total += parseFloat(Utils.getCellValue(column + rowCounter, worksheet));
 
         rowCounter++;
@@ -148,26 +146,15 @@ function getTotalValue(worksheet) {
     return "Orders: " + (rowCounter - 2) + " Total: $" + addComma(split[0]) + "." + split[1];
 }
 
-function commafy(nStr) {
-    return nStr.toString().replace("\\B(?=(\\d{3})+(?!\\d))", ',');
-}
-
 function addComma(num) {
+    //adds commas to a string of numbers
     if (num === null) return;
 
     return (
-        num
-            .toString() // transform the number to string
-            .split("") // transform the string to array with every digit becoming an element in the array
-            .reverse() // reverse the array so that we can start process the number from the least digit
-            .map((digit, index) =>
-                index != 0 && index % 3 === 0 ? `${digit},` : digit
-            ) // map every digit from the array.
-            // If the index is a multiple of 3 and it's not the least digit,
-            // that is the place we insert the comma behind.
-            .reverse() // reverse back the array so that the digits are sorted in correctly display order
-            .join("")
-    ); // transform the array back to the string
+        num.toString().split("") 
+            .reverse() .map((digit, index) => {
+                index != 0 && index % 3 === 0 ? `${digit},` : digit;
+            }).reverse().join(""));
 }
 
 function costsMoreThan(amount) {

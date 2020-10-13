@@ -42,13 +42,12 @@ function availability() {
     // generates a worksheet that shows the avaible and unavialble products
 
     //loads json
-    let rawdata = fs.readFileSync('./data/products.json');
-    let data = JSON.parse(rawdata);
+    let products = getJsonData();
 
     //makes arrays of prduct availability
     let available = [];
     let disabled = [];
-    data.data.forEach((pdc) => {
+    products.data.forEach((pdc) => {
         if (pdc.availability === "available") {
             available.push(pdc.sku);
 
@@ -66,7 +65,6 @@ function availability() {
     let disabledLength = disabled.length;
     for (let i = 0; i < Math.min(availableLength, disabledLength); i++) {
         workSheetData.push([available.shift(), disabled.shift()]);
-
     }
 
     //puts the reaminder of the data in the data array
@@ -78,24 +76,20 @@ function availability() {
     }
 
     //saves the data into a workbook
-    let workBook = wbUtils.makeWorkBook();
-    let workSheet = wbUtils.generateSheet(workSheetData);
-    wbUtils.addWorkSheet(workBook, workSheet);
-    wbUtils.saveWorkBook(workBook, "reports/availability.xlsx");
+    saveToWorkbook(workSheetData,"reports/availability.xlsx" )   
 }
 
 function multiple() {
     //generates a report that lists all the projucts that have multiple variants
 
     //loads json
-    let rawdata = fs.readFileSync('./data/products.json');
-    let data = JSON.parse(rawdata);
+    let products = getJsonData();
 
     //makes arrays of prduct availability
     let workSheetData = [];
     workSheetData.push(["Multiple Variants"]);
 
-    data.data.forEach((pdc) => {
+    products.data.forEach((pdc) => {
         if (pdc.variants.length !== 0) {
             console.log(pdc.sku + " " + pdc.variants.length);
             workSheetData.push([pdc.sku]);
@@ -103,10 +97,7 @@ function multiple() {
     });
 
     //saves the data into a workbook
-    let workBook = wbUtils.makeWorkBook();
-    let workSheet = wbUtils.generateSheet(workSheetData);
-    wbUtils.addWorkSheet(workBook, workSheet);
-    wbUtils.saveWorkBook(workBook, "reports/Variants.xlsx");
+    saveToWorkbook(workSheetData, "reports/Variants.xlsx");
 }
 
 function price() {
@@ -122,29 +113,23 @@ function price() {
 
     readline.question('> ', option => {
 
-        switch (option) {
-            case "2":
-                func = (a, b) => { return a < b; };
-                break;
-            default:
-                // does nothing
-                break;
+        if(option === "2"){
+            func = (a, b) => { return a < b; };
         }
 
         //asks the user for an amount
-        console.log("Please type the number:");
+        console.log("Please type the an amount:");
 
         readline.question('> ', num => {
 
             //loads json
-            let rawdata = fs.readFileSync('./data/products.json');
-            let data = JSON.parse(rawdata);
+            let products = getJsonData();
 
             //makes arrays of prduct that meets requirements 
             let workSheetData = [];
             workSheetData.push(["Filtered by Price"]);
 
-            data.data.forEach((pdc) => {
+            products.data.forEach((pdc) => {
 
                 if (func(parseFloat(pdc.price), parseFloat(num))) {
 
@@ -152,13 +137,25 @@ function price() {
                 }
             });
 
-            //saves the data into a workbook
-            let workBook = wbUtils.makeWorkBook();
-            let workSheet = wbUtils.generateSheet(workSheetData);
-            wbUtils.addWorkSheet(workBook, workSheet);
-            wbUtils.saveWorkBook(workBook, "reports/price.xlsx");
-
+            //saves data to excel
+            saveToWorkbook(workSheetData, "reports/price.xlsx")
             readline.close();
         });
     });
+}
+
+function getJsonData(){
+    //loads json for this program
+
+    let rawdata = fs.readFileSync('./data/products.json');
+    return JSON.parse(rawdata);
+}
+
+function saveToWorkbook(data, path) {
+    //saves the data into a workbook
+
+    let workBook = wbUtils.makeWorkBook();
+    let workSheet = wbUtils.generateSheet(workSheetData);
+    wbUtils.addWorkSheet(workBook, workSheet);
+    wbUtils.saveWorkBook(workBook, path);
 }
