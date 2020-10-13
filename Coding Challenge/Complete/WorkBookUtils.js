@@ -13,13 +13,17 @@ module.exports = function Untils(){
             while(cell !== title && cell !== undefined){
         
                 let address = String.fromCharCode("A".charCodeAt(0) + result)  + "1";
-                console.log(address);
                 result++;
                 cell = this.getCellValue( address, worksheet);
             }
-        
-            return cell === undefined ? 
-                undefined : String.fromCharCode("A".charCodeAt(0) + result - 1);
+
+            if(cell === undefined){
+                return undefined;
+            } else if(result === 0 ){
+                return String.fromCharCode("A".charCodeAt(0) + result);
+            } else {
+                return String.fromCharCode("A".charCodeAt(0) + result - 1); 
+            }
         },
 
         getCellValue : function (cellAdress, worksheet) {
@@ -38,31 +42,18 @@ module.exports = function Untils(){
             return result;
         },
 
-        copyRow : function(worksheet, row, endLetter) {
-            //returns an array of values up to the endLetter of a row
-            //assume: endLetter is a single char
-        
-            let result = [];
-            let ending = endLetter.toUppderCase();
-        
-            for (let i = "A".charCodeAt(0); i < ending.charCodeAt(0); i++) {
-                result.push(this.getCellValue[String.fromCharCode(i) + row], worksheet);
-            }
-        
-            return result;
-        },
-
         makeWorkBook : function() {
             /* create a new blank workbook */
             return XLSX.utils.book_new();
         },
         
-        makeWorkSheet : function (workbook, sheetName) {
+        generateSheet : function (data) {
             //makes a worksheet and adds it to the workbook
-        
-            let worksheet = XLSX.utils.aoa_to_sheet([]);
-            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-            return worksheet;
+            return XLSX.utils.aoa_to_sheet(data);;
+        },
+
+        addWorkSheet : function (workBook, workSheet, workSheetName){
+            XLSX.utils.book_append_sheet(workBook, workSheet, workSheetName);
         },
         
         saveWorkBook : function(workBook, path) {

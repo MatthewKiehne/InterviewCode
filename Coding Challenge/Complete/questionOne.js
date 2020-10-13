@@ -1,6 +1,13 @@
 
 if (typeof require !== 'undefined') XLSX = require('xlsx');
-const WorkBookUtils = require('./WorkBookUtils');
+const WorkBookUtils = require('./WorkBookUtils'),
+    fs = require('fs');
+
+const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
 var Utils = WorkBookUtils();
 
 //error reports
@@ -8,137 +15,42 @@ console.log("Invalid Email Addresses")
 InvalidEntry("I", "@.+(\.com|\.edu|\.net|\.org)$", 2);
 console.log("")
 console.log("Invalid Phone Numbers")
-InvalidEntry("H", "\\d\\d\\d-\\d\\d\\d-\\d\\d\\d\\d", 2);
-
+InvalidEntry("H", "\\d{3}-\\d{3}-\\d{4}", 2);
 
 
 //1
-withinADay();
+var tempSheet = getSheet();
+writeExcelReport(tempSheet, 2,
+    ["OrderNum", "OrderDate", "ShipDate"],
+    withinADay, "reports/LessThanADay.xlsx");
+
 
 //2
-console.log(Utils.getHeaderColumn(getSheet(),"asdf"));
+console.log("");
+readline.question('Please Enter a minimum amount: ', amount => {
+
+    let func = costsMoreThan(amount);
+
+    writeExcelReport(tempSheet, 2,
+        ["OrderNum", "OrderTotal"],
+        func, "reports/CostsMoreThan.xlsx");
+
+    readline.close();
+});
 
 //3
+var today = new Date();
+var dd = String(today.getDate()).padStart(2, '0');
+var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+var yyyy = today.getFullYear();
+let fileName = mm + "" + dd + "" + yyyy + "-ordertotal.txt";
 
-function withinADay() {
-    //checks to see if the orderDate and ShipDate are less than 24 hours apart
-    let dateData = getSheetData(2, ["A", "L", "M"]);
+// Write data in 'Output.txt' . 
+fs.writeFile('reports/' + fileName, getTotalValue(tempSheet), (err) => {
 
-    //make excel sheet
-
-
-    //go though data
-    for (let i = 0; i < dateData.length; i++) {
-
-        //I cant find a date parser!!!!!
-        //so i guess im doing it by hand!
-        let orderDate = (dateData[i])["L"].match("(\\d\\dT)")[0];
-        orderDate = orderDate.substring(0, orderDate.length - 1);
-        let ordertime = (dateData[i])["L"].match("\\d\\d:\\d\\d:\\d\\d")[0];
-
-        let sendDate = (dateData[i])["M"].match("(\\d\\dT)")[0];
-        sendDate = sendDate.substring(0, sendDate.length - 1);
-        let sendTime = (dateData[i])["M"].match("\\d\\d:\\d\\d:\\d\\d")[0];
-
-        if (parseInt(orderDate) + 1 === parseInt(sendDate)) {
-            //next day
-
-            let orderTimeSplit = ordertime.split(":");
-            let sendTimeSplit = sendTime.split(":");
-            console.log(dateData[i]["A"] + " " + parseInt(orderDate) + " " + parseInt(sendDate));
-            console.log(dateData[i]["A"] + " " + orderTimeSplit[0]);
-
-            //checks the hours:minutes:seconds to see if they are less than 24 hours
-            if (parseInt(sendTimeSplit[0]) < parseInt(orderTimeSplit[0])) {
-                console.log("Hour: " + dateData[i]["A"] + " " + ordertime + " " + sendTime);
-            } else if (parseInt(sendTimeSplit[0]) === parseInt(orderTimeSplit[0])) {
-                if (parseInt(sendTimeSplit[1]) < parseInt(orderTimeSplit[1])) {
-                    console.log("Minute: " + dateData[i]["A"] + " " + ordertime + " " + sendTime);
-                } else if (parseInt(sendTimeSplit[1]) === parseInt(orderTimeSplit[1])) {
-                    if (parseInt(sendTimeSplit[2]) <= parseInt(orderTimeSplit[2])) {
-                        console.log("Second: " + dateData[i]["A"] + " " + ordertime + " " + sendTime);
-                    }
-                }
-            }
-
-        } else if (parseInt(orderDate) === parseInt(sendDate)) {
-            //same day
-
-            console.log("same Day: " + dateData[i]["A"] + " " + parseInt(orderDate) + " " + parseInt(sendDate));
-        }
-    }
-}
-
-function getSheetData(startRow, columns) {
-    //returns an array of objects that holds the data rom the columns
-    //colums should be an array of column you want data from
-
-    let result = [];
-
-    let worksheet = getSheet();
-
-    let rowCounter = startRow;
-    let cellAdress = "A" + rowCounter;
-    let cellValue = Utils.getCellValue(cellAdress, worksheet);
-
-    while (cellValue !== undefined) {
-
-        result.push(Utils.getRowData(worksheet, rowCounter, columns));
-
-        rowCounter++;
-        cellAdress = "A" + rowCounter;
-        cellValue = Utils.getCellValue(cellAdress, worksheet);
-    }
-
-    return result;
-}
-
-
-
-
-
-/*
-function getHeaderWidth(worksheet){
-    //return the number of columns in the header
-    //assume: no empty spaces in the header
-    //assume: header cells are not merged
-    //assume: header is on row 1
-
-    let result = 0;
-    let cell = getCellValue("A1",worksheet);
-
-    while(cell !== undefined){
-
-        let address = String.fromCharCode("A".charCodeAt(0) + result)  + "1";
-        console.log(address);
-        result++;
-        cell = getCellValue( address, worksheet);
-    }
-
-    return result;
-}
-*/
-
-function getSheet() {
-    //gets the sheet with the data on it
-
-    let workbook = XLSX.readFile('data/shippingDetails.xlsx');
-
-    let first_sheet_name = workbook.SheetNames[0];
-    return workbook.Sheets[first_sheet_name];
-}
-
-function writeReport(worksheet, startRow, columns, func, path){
-    //iterates over each row in the worksheet gives it to the function (func)
-    //if func returns true, it coppies the row into a workbook and saves it
-    //columns (parameter) is the title of the columns wanted for func
-
-    let workBook = Utils.makeWorkBook();
-    let writeSheet = Utils.makeWorkSheet(workBook, "Report");
-
-
-    Utils.saveWorkBook(workBook);
-}
+    // In case of a error throw err. 
+    if (err) throw err;
+});
 
 function InvalidEntry(CellRow, exp, startingRow) {
     //checks to see if the regular expression matches the cell
@@ -163,4 +75,160 @@ function InvalidEntry(CellRow, exp, startingRow) {
         rowCounter++;
         cellValue = Utils.getCellValue(CellRow + rowCounter, worksheet);
     }
+}
+
+function writeExcelReport(worksheet, startRow, columns, func, path) {
+    //iterates over each row in the worksheet and gives it to the function (func)
+    //if func returns true, it coppies the row into a workbook and saves it
+    //columns (parameter) is the title of the columns wanted for func
+
+    //holds the error data
+    let errorData = [];
+    errorData.push(columns);
+
+    let rowCounter = startRow;
+    cellValue = Utils.getCellValue("A" + rowCounter, worksheet);
+
+    //gets the columns for the tiles passed in
+    let headerColumns = {};
+    for (let i = 0; i < columns.length; i++) {
+        headerColumns[columns[i]] = Utils.getTitleColumn(worksheet, columns[i]);
+    }
+
+    //goes through the data on the page
+    while (cellValue !== undefined) {
+
+        let rowObj = {};
+        for (let i = 0; i < columns.length; i++) {
+            rowObj[columns[i]] = Utils.getCellValue(headerColumns[columns[i]] + rowCounter, worksheet);
+        }
+
+        if (func(rowObj)) {
+
+            let rowData = [];
+            for (let i = 0; i < columns.length; i++) {
+                rowData.push(rowObj[columns[i]]);
+            }
+            errorData.push(rowData);
+        }
+
+        rowCounter++;
+        cellValue = Utils.getCellValue("A" + rowCounter, worksheet);
+    }
+
+    //saves the workbook
+    let workBook = Utils.makeWorkBook();
+    let errorSheet = Utils.generateSheet(errorData);
+    Utils.addWorkSheet(workBook, errorSheet, "Report");
+    Utils.saveWorkBook(workBook, path);
+}
+
+function getTotalValue(worksheet) {
+
+    let total = 0;
+
+    let rowCounter = 2;
+    cellValue = Utils.getCellValue("A" + rowCounter, worksheet);
+
+    //gets the columns for the tiles passed in
+    let column = Utils.getTitleColumn(worksheet, "OrderTotal");
+
+    //goes through the data on the page
+    while (cellValue !== undefined) {
+
+
+        total += parseFloat(Utils.getCellValue(column + rowCounter, worksheet));
+
+        rowCounter++;
+        cellValue = Utils.getCellValue("A" + rowCounter, worksheet);
+    }
+
+    let split = total.toString().split(".");
+
+    return "Orders: " + (rowCounter - 2) + " Total: $" + addComma(split[0]) + "." + split[1];
+}
+
+function commafy(nStr) {
+    return nStr.toString().replace("\\B(?=(\\d{3})+(?!\\d))", ',');
+}
+
+function addComma(num) {
+    if (num === null) return;
+
+    return (
+        num
+            .toString() // transform the number to string
+            .split("") // transform the string to array with every digit becoming an element in the array
+            .reverse() // reverse the array so that we can start process the number from the least digit
+            .map((digit, index) =>
+                index != 0 && index % 3 === 0 ? `${digit},` : digit
+            ) // map every digit from the array.
+            // If the index is a multiple of 3 and it's not the least digit,
+            // that is the place we insert the comma behind.
+            .reverse() // reverse back the array so that the digits are sorted in correctly display order
+            .join("")
+    ); // transform the array back to the string
+}
+
+function costsMoreThan(amount) {
+    //returns a funciton that remembers the min needed to return true
+
+    let min = amount;
+
+    return function not(data) {
+        //checks to see if the cost is over a certain amount
+        //requires: "OrderNum" and "OrderTotal"
+
+        return parseFloat(data.OrderTotal) > min;
+    }
+}
+
+function withinADay(data) {
+    //checks to see if the orderDate and ShipDate are less than 24 hours apart
+    //requires: "OrderNum", "OrderDate", "ShipDate" in data
+
+    let result = false;
+
+    //parsing date and time for send and order date/time
+    let orderDate = (data.OrderDate + "").match("(\\d\\dT)")[0];
+    orderDate = orderDate.substring(0, orderDate.length - 1);
+    let ordertime = data.OrderDate.match("\\d\\d:\\d\\d:\\d\\d")[0];
+
+    let sendDate = data.ShipDate.match("(\\d\\dT)")[0];
+    sendDate = sendDate.substring(0, sendDate.length - 1);
+    let sendTime = data.ShipDate.match("\\d\\d:\\d\\d:\\d\\d")[0];
+
+    if (parseInt(orderDate) + 1 === parseInt(sendDate)) {
+        //next day
+
+        let orderTimeSplit = ordertime.split(":");
+        let sendTimeSplit = sendTime.split(":");
+
+        //checks the hours:minutes:seconds to see if they are less than 24 hours
+        if (parseInt(sendTimeSplit[0]) < parseInt(orderTimeSplit[0])) {
+            result = true;
+        } else if (parseInt(sendTimeSplit[0]) === parseInt(orderTimeSplit[0])) {
+            if (parseInt(sendTimeSplit[1]) < parseInt(orderTimeSplit[1])) {
+                result = true;
+            } else if (parseInt(sendTimeSplit[1]) === parseInt(orderTimeSplit[1])) {
+                if (parseInt(sendTimeSplit[2]) <= parseInt(orderTimeSplit[2])) {
+                    result = true;
+                }
+            }
+        }
+
+    } else if (parseInt(orderDate) === parseInt(sendDate)) {
+        //same day
+        result = true;
+    }
+    return result;
+}
+
+function getSheet() {
+    //gets the sheet with the data on it
+
+    let workbook = XLSX.readFile('data/shippingDetails.xlsx');
+
+    let first_sheet_name = workbook.SheetNames[0];
+    return workbook.Sheets[first_sheet_name];
 }
